@@ -1,0 +1,14 @@
+div.wrapper {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 3;
+}
+
+fieldset {
+  background-color: white;
+  color: black;
+  width: 18vw;
+  display: flex;
+  border-width: 1px;
+}
