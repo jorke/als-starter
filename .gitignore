@@ -25,6 +25,13 @@ dist-ssr
 
 .env*
 
-tmp
-dist/*
-cdk.*
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+cdk.json
+infra

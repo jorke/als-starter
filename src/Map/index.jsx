@@ -2,21 +2,22 @@ import React, { useState, useRef } from 'react'
 import MapGL, {
   NavigationControl,
   GeolocateControl,
-} from 'react-map-gl/maplibre'
+} from '@vis.gl/react-maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './index.css'
 import LatLonBox from '../LatLonBox'
 
 const apiKey = process.env.APIKEY || ''
-const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'vectormap'
+const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'heresat'
 const region = process.env.REGION || ''
 
 const Map = () => {
   const [viewport, setViewport] = useState({
     latitude: -33.875,
     longitude: 151.205,
-    zoom: 13,
+    zoom: 1,
   })
+
   const [lngLat, setLngLat] = useState({ lat: viewport.latitude, lng: viewport.longitude})
 
   const mapRef = useRef()
@@ -46,6 +47,7 @@ const Map = () => {
             />
         </MapGL>
         <LatLonBox data={lngLat} />
+        <button onClick={() => mapRef.current.getMap().setProjection({type: 'globe'})}>Globe</button>
       </>
     :
       <h1>check your env variables for APIKEY, DEFAULT_MAPSTYLE, and REGION respectively. 
