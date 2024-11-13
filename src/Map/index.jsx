@@ -8,7 +8,7 @@ import './index.css'
 import LatLonBox from '../LatLonBox'
 
 const apiKey = process.env.APIKEY || ''
-const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'satmap'
+const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'vectormap'
 const region = process.env.REGION || ''
 
 const Map = () => {
