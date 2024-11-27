@@ -25,7 +25,8 @@ dist-ssr
 
 .env*
 
-*.js
+tmp/*
+
 !jest.config.js
 *.d.ts
 node_modules

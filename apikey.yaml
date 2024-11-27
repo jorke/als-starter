@@ -1,0 +1,34 @@
+Resources:
+  alsapikey:
+    Type: AWS::Location::APIKey
+    Properties:
+      Description: api key for location services
+      KeyName: als-starter-example
+      NoExpiry: true
+      Restrictions:
+        AllowActions:
+          - geo-maps:GetTile
+          - geo-places:Autocomplete
+          - geo-places:Geocode
+          - geo-places:GetPlace
+          - geo-places:ReverseGeocode
+          - geo-places:SearchNearby
+          - geo-places:SearchText
+          - geo-places:Suggest
+        AllowReferers:
+          - https://*.amplifyapp.com
+          - http://localhost:5173
+        AllowResources:
+          - Fn::Join:
+              - ""
+              - - "arn:aws:geo-maps:"
+                - Ref: AWS::Region
+                - ::provider/default
+          - Fn::Join:
+              - ""
+              - - "arn:aws:geo-places:"
+                - Ref: AWS::Region
+                - ::provider/default
+Outputs:
+  apikey:
+    Value: als-starter-example

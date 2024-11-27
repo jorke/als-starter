@@ -6,10 +6,8 @@ export default props => {
   return (
     <div className='wrapper'>
       <fieldset>
-        <code>
           lat: {lat}<br />
           lng: {lng}
-        </code>
       </fieldset>
     </div>
   )

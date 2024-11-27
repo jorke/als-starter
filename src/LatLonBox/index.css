@@ -11,4 +11,5 @@ fieldset {
   width: 18vw;
   display: flex;
   border-width: 1px;
+  font-family: monospace
 }

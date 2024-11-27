@@ -1,85 +1,170 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import MapGL, {
   NavigationControl,
   GeolocateControl,
   Source,
   Layer,
-} from '@vis.gl/react-maplibre'
-import maplibregl from 'maplibre-gl'
-// import * as pmtiles from 'pmtiles'
-
+  Marker,
+  MapProvider
+} from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import {bboxPolygon } from "@turf/bbox-polygon"
 import './index.css'
+import Pin from '../Pin'
 import LatLonBox from '../LatLonBox'
 import StyleSelector from '../StyleSelector'
+import PlacesSuggest from '../PlacesSuggest'
+import PlaceTable from '../Place'
 
 const apiKey = process.env.APIKEY || ''
-const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'satmap'
+const defaultMapStyle = process.env.DEFAULT_MAPSTYLE || 'Monochrome' //Standard, Monochrome, Hybrid, Satellite
 const region = process.env.REGION || ''
+const colorScheme = 'Light'
 
 const Map = () => {
-
-  const [pmTilesReady, setPmTilesReady] = useState(false)
-  
+  const [mapStyle, setMapStyle] = useState(defaultMapStyle)
+  const [marker, setMarker] = useState()
+  const [place, setPlace] = useState()
   const [viewport, setViewport] = useState({
-    latitude: -33.875,
-    longitude: 151.205,
-    zoom: 5,
+    latitude: -25.528,
+    longitude: 135.365,
+    zoom: 4,
   })
+  const [boundingBox, setBoundingBox] = useState(
+    [
+      112.60532385572196, -44.009791651340684,
+      154.4992789661676, -9.925413000595569
+    ]
+  )
+  
+  const [search, setSearch] = useState([])
+  const [hoverInfo, setHoverInfo] = useState(null)
 
-  // useEffect(() => {
-  //   const protocol = new pmtiles.Protocol({metadata: true})
-  //   maplibregl.addProtocol('pmtiles', protocol.tile)
-  //   setPmTilesReady(true)
+  const boundingBoxJSON = useMemo(() => bboxPolygon(boundingBox), [boundingBox])
+
+  const searchGeoJSON = useMemo(() => { 
+    return {
+      type: 'FeatureCollection',
+      features: search.map( s => ({
+        type: 'Feature',
+        properties: {
+          Place: s.Place
+        },
+        geometry: {
+          coordinates: [s.Position[0], s.Position[1]],
+          type: 'Point',
+        }
+      }))
+    }
+  }, [search])
+
+  const onHover = useCallback(e => {
+    // console.log(e)
+    const { features, point: { x, y } } = e
     
-  //   return () => {
-  //     maplibregl.removeProtocol('pmtiles')
-  //   }
+    const hoveredFeature = features && features[0]
+    setHoverInfo(hoveredFeature && { feature: hoveredFeature, x, y });
+  }, [])
 
-  // }, [])
-
+  const featureClick = useCallback(event => {
+    const { features, point: { x, y } } = event
+    const clickedFeatures = features && features[0]
+    if (!clickedFeatures) return
+    const cleaned = JSON.parse(clickedFeatures.properties.Place)
+    navigator.clipboard.writeText(JSON.stringify(cleaned, null, 2))
+  })
+  
   const [lngLat, setLngLat] = useState({ lat: viewport.latitude, lng: viewport.longitude})
 
   const mapRef = useRef()
+  const handleSelect = (fullResult) => {  
+    if (!fullResult) return
+    const { PlaceId, Title, Position: [ lng, lat ] } = fullResult
+    const place = { PlaceId, Title, lng, lat }
+    setPlace(fullResult)
+    setMarker({lng, lat})
+    mapRef.current.flyTo({ center: [lng, lat], zoom: 19 })
+    console.log(place)
+  }
+
+  const onSearchData = data => setSearch(data)
+
+  const handleStyleChange = (style) => {
+    setMapStyle(style)
+  }
 
   return (
     (apiKey && defaultMapStyle && region) ?
-      <>
-        <MapGL
-          initialViewState={viewport} 
-          ref={mapRef}
-          onViewportChange={(v) => setViewport(v)}
-          width="100vw"
-          height="100vh"
-          // mapStyle={pmTilesReady ? `https://maps.geo.${region}.amazonaws.com/maps/v0/maps/${defaultMapStyle}/style-descriptor?key=${apiKey}` : undefined}
-          mapStyle={`https://maps.geo.${region}.amazonaws.com/maps/v0/maps/${defaultMapStyle}/style-descriptor?key=${apiKey}`}
-          onMouseMove={(m) =>setLngLat(m.lngLat)}
-          tileSize={512}
-          projection={{ type: 'mercator'}}
-          mapLib={maplibregl}
-        >
-          {/* <Source id="pmtiles" type="vector" url="pmtiles://https://d1firxt62yjjug.cloudfront.net/pmtiles/nsw_lga.pmtiles"> 
-            <Layer id="pmtiles-lines" source="pmtiles" type="line" source-layer="nswlgaboundaries"
+      <MapProvider>
+        <PlacesSuggest 
+          apiKey={apiKey} 
+          region={region} 
+          onSelect={handleSelect} 
+          onSearchData={onSearchData} 
+          BoundingBox={boundingBox}
+          
+          />
+          <MapGL
+            initialViewState={viewport}
+            ref={mapRef}
+            onViewportChange={(v) => setViewport(v)}
+            mapStyle={`https://maps.geo.${region}.amazonaws.com/v2/styles/${mapStyle}/descriptor?color-scheme=${colorScheme}&key=${apiKey}`}
+            interactiveLayerIds={['search-data-layer']}
+            onMouseMove={(m) => { 
+              setLngLat(m.lngLat);
+              onHover(m)
+            }}
+            tileSize={512}
+            projection={{ type: 'mercator' }}
+            onClick={featureClick}
+          >
+          {marker && <Marker
+            longitude={marker.lng}
+            latitude={marker.lat}
+            anchor="bottom"
+            onClick={e => e.originalEvent.stopPropagation()}
+          >
+            <Pin />
+          </Marker>}
+          <Source id="bbox-source" type="geojson" data={boundingBoxJSON}>
+            <Layer 
+              source="bbox-source"
+              id="bbox-layer"
+              type="fill"
               paint={{
-                "line-color": "red",
-                "line-width": 2
+                'fill-color': 'rgb(255, 255, 255, 0.1)'
               }}
             />
-          </Source> */}
-          <GeolocateControl
-            style={{ right: 10, bottom: 85 }}
-            positionOptions={{ enableHighAccuracy: true }}
-            trackUserLocation
-            auto={false}
-          />
-          <NavigationControl
+          </Source>
+          <Source id="search-data" type="geojson" data={searchGeoJSON}>
+            <Layer type="circle"
+              source="search-data"
+              id="search-data-layer"
+              paint={{
+                'circle-radius': 5,
+                'circle-color': 'rgb(255, 0, 0, 1)'
+              }}
+            />
+          </Source>
+            <GeolocateControl
+              style={{ right: 10, bottom: 85 }}
+              positionOptions={{ enableHighAccuracy: true }}
+              trackUserLocation
+              auto={false}
+            />
+            <NavigationControl
               style={{ right: 10, bottom: 20 }}
               showCompass={false}
             />
-        </MapGL>
+          {hoverInfo && (
+            <div className="tooltip" style={{ left: hoverInfo.x+10, top: hoverInfo.y-5, position: 'fixed' }}>
+              <PlaceTable place={JSON.parse(hoverInfo.feature.properties.Place)} />
+            </div>
+          )}
+          </MapGL>        
         <LatLonBox data={lngLat} />
-        <StyleSelector ref={mapRef} />
-      </>
+        <StyleSelector ref={mapRef} handleStyleChange={handleStyleChange} />
+      </MapProvider>
     :
       <h1>check your env variables for APIKEY, DEFAULT_MAPSTYLE, and REGION respectively. 
         You can also check the README for more details.
