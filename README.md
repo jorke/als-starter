@@ -1,6 +1,6 @@
 # Amazon Location Services React starter
 
-Generate an API key for at least your basemap: https://docs.aws.amazon.com/location/latest/developerguide/using-apikeys.html 
+Generate an API key for at least your basemap: https://docs.aws.amazon.com/location/latest/developerguide/using-apikeys.html
 
 example `.env` file:
 
@@ -15,3 +15,4 @@ npm install
 npm run dev
 
 ```
+
